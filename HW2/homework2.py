@@ -24,7 +24,7 @@ y_train, y_test = labels[:split_point], labels[split_point:]
 
 sensitive_attribute = 19
 
-model = LogisticRegression(C=1, max_iter=1000, random_state=42)
+model = LogisticRegression(C=1.001, max_iter=1000, random_state=42)
 
 # %% [markdown]
 # 1. Report the prevalence in the test set.
@@ -118,11 +118,13 @@ new_coeff = new_model.coef_[0][biggest_change_idx]
 # 7. Report the demographic parity of the classifier after implementing the above intervention.
 
 # %%
-new_y_pred_0 = y_pred_no_z[X_test_no_z[:, sensitive_attribute] == 0]
-new_y_pred_1 = y_pred_no_z[X_test_no_z[:, sensitive_attribute] == 1]
+
+new_y_pred_0 = y_pred_no_z[X_test[:, 19] == 0]
+new_y_pred_1 = y_pred_no_z[X_test[:, 19] == 1]
 
 new_parity = np.mean(new_y_pred_0) / np.mean(new_y_pred_1)
 new_parity
+
 
 # %% [markdown]
 # 8. Report the Generalized False Positive Rate and Generalized False Negative Rate of your original (i.e., not the one with z excluded).
@@ -136,8 +138,8 @@ len(y_prob), len(y_prob[y_pred == 0])
 tp, fn, tn, fp = get_metrics(y_test, y_pred)
 y_prob = model.predict_proba(X_test)[:, 1]
 
-GFPR = 1 / (fp + tn) * np.sum(y_prob[y_pred == 0])
-GFNR = 1 / (fn + tp) * np.sum(1 - y_prob[y_pred == 1])
+GFPR = 1 / (fp + tn) * np.sum(y_prob[y_test == 0])
+GFNR = 1 / (fn + tp) * np.sum(1 - y_prob[y_test == 1])
 
 GFPR, GFNR
 
@@ -149,31 +151,35 @@ threshold = 0.4
 
 sensitive_attribute = 18
 new_model = LogisticRegression(C=1, max_iter=1000, random_state=42)
+
+sensitive_values = X_test[:, sensitive_attribute]
 X_train_no_18 = np.delete(X_train, sensitive_attribute, axis=1)
 X_test_no_18 = np.delete(X_test, sensitive_attribute, axis=1)
 new_model.fit(X_train_no_18, y_train)
 pred_prob = new_model.predict_proba(X_test_no_18)[:, 1]
 y_pred_threshold = (pred_prob > threshold).astype(int)
 
-y_pred_0 = y_pred_threshold[X_test[:, sensitive_attribute] == 0]
-y_pred_1 = y_pred_threshold[X_test[:, sensitive_attribute] == 1]
-y_test_0 = y_test[X_test[:, sensitive_attribute] == 0]
-y_test_1 = y_test[X_test[:, sensitive_attribute] == 1]
+y_pred_0 = y_pred_threshold[sensitive_values == 0]
+y_pred_1 = y_pred_threshold[sensitive_values == 1]
+y_test_0 = y_test[sensitive_values == 0]
+y_test_1 = y_test[sensitive_values == 1]
 
 tp0, fn0, tn0, fp0 = get_metrics(y_test_0, y_pred_0)
 tp1, fn1, tn1, fp1 = get_metrics(y_test_1, y_pred_1)
 
 # If this is 1.0 then the treatment is equal
-fp1 * fn0 / fp0 * fn1
+print(fp1 * fn0 / fp0 * fn1)
 
+# FP0 and FN0 are wrong
 FP_0, FP_1, FN_0, FN_1 = fp0, fp1, fn0, fn1
+FP_0, FP_1, FN_0, FN_1
 
 # %%
 answers = {
     "Q1": prevalence,           # prevalence
     "Q2": [prevalence_0, prevalence_1],  # prevalence_0, prevalence_1
     "Q3": parity,           # parity
-    "Q4": [TPR_0, TPR_1, FPR_0, FPR_0], # TPR_0, TPR_1, FPR_0, FPR_1
+    "Q4": [TPR_0, TPR_1, FPR_0, FPR_1], # TPR_0, TPR_1, FPR_0, FPR_1
     "Q5": [PPV_0, PPV_1, NPV_0, NPV_1], # PPV_0, PPV_1, NPV_0, NPV_1
     "Q6": [biggest_change_idx, new_coeff], # feature index, coefficient
     "Q7": new_parity,           # parity
